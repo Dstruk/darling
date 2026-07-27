@@ -25,37 +25,66 @@ body {
     width: 100vw;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* El scroll lo maneja el contenedor interno */
+    overflow: hidden;
 }
 
+/* --- HEADER Y BOTONES --- */
 .editor-header {
-    height: var(--toolbar-h);
+    min-height: var(--toolbar-h);
     background: var(--bg-editor);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 1.5rem;
+    padding: 10px 1.5rem;
     border-bottom: 1px solid rgba(255,255,255,0.1);
     z-index: 1000;
-    flex-shrink: 0;
+    flex-wrap: wrap;
 }
 
-.logo {
-    font-size: 1.2rem;
-    font-weight: 900;
-    color: var(--primary);
-    letter-spacing: 1px;
-    text-transform: uppercase;
+.btn-tool {
+    display: inline-block;
+    padding: 0.6rem 1.2rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.85rem;
+    text-align: center;
+    transition: all 0.2s;
+    white-space: nowrap;
 }
 
-/* --- ESCENARIO DE EDICIÓN CENTRADO --- */
+.btn-tool:hover { filter: brightness(1.2); transform: translateY(-1px); }
+
+.btn-tool.secondary {
+    background: rgba(255,255,255,0.1);
+}
+
+.toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.divider {
+    width: 1px;
+    height: 30px;
+    background: rgba(255,255,255,0.1);
+    margin: 0 5px;
+}
+
+/* --- CONTENEDOR CENTRADO ABSOLUTO --- */
 #editor-container {
     flex: 1;
     width: 100%;
-    overflow: auto; /* Permite scroll si el documento es más grande que la pantalla */
+    overflow: auto;
     display: flex;
-    justify-content: center; /* Centrado horizontal del contenido */
-    align-items: flex-start; /* Inicia desde arriba pero centrado horizontalmente */
+    flex-direction: column;
+    align-items: center; /* Centrado horizontal */
+    justify-content: flex-start;
     padding: 40px 15px;
     background-color: var(--bg-main);
     -webkit-overflow-scrolling: touch;
@@ -64,26 +93,43 @@ body {
 #canvas-wrapper {
     display: flex;
     flex-direction: column;
-    align-items: center; /* Asegura que cada página esté centrada en el wrapper */
-    min-width: fit-content; /* Mantiene el tamaño para no romper la edición */
+    align-items: center;
+    width: 100%;
 }
 
 .page-container {
     position: relative;
     background: white;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.6);
     margin-bottom: 40px;
-    /* Mantenemos el tamaño original para que el motor de PDF no pierda precisión */
+    max-width: 100%; /* Adaptabilidad total */
+    height: auto !important;
+}
+
+canvas {
+    max-width: 100% !important;
+    height: auto !important;
     display: block;
 }
 
-/* Adaptabilidad para móviles sin romper la escala de edición */
-@media (max-width: 600px) {
-    #editor-container {
-        padding: 20px 10px;
-    }
+/* ZONA DE CARGA */
+#drop-zone {
+    border: 2px dashed rgba(255,255,255,0.3);
+    padding: 80px 40px;
+    text-align: center;
+    border-radius: 20px;
+    background: var(--bg-editor);
+    width: 100%;
+    max-width: 500px;
+    margin-top: 5vh;
 }
 
+#drop-zone.active {
+    border-color: var(--primary);
+    background: rgba(37, 99, 235, 0.1);
+}
+
+/* EDITABLE BLOCKS */
 .text-layer {
     position: absolute;
     top: 0;
@@ -109,7 +155,7 @@ body {
     color: black;
 }
 
-/* UI Controls */
+/* CONTROLES DE NAVEGACIÓN */
 .nav-controls {
     display: flex;
     align-items: center;
@@ -117,7 +163,6 @@ body {
     background: rgba(0,0,0,0.4);
     padding: 5px 15px;
     border-radius: 8px;
-    border: 1px solid rgba(255,255,255,0.05);
 }
 
 #page-num-display {
@@ -127,46 +172,7 @@ body {
     text-align: center;
 }
 
-.btn-tool {
-    padding: 0.6rem 1.2rem;
-    background: var(--primary);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-weight: 700;
-    cursor: pointer;
-    font-size: 0.8rem;
-    transition: all 0.2s;
-}
-
-.btn-tool:hover {
-    filter: brightness(1.2);
-    transform: translateY(-1px);
-}
-
-.btn-tool.secondary {
-    background: rgba(255,255,255,0.1);
-}
-
-#drop-zone {
-    width: 90%;
-    max-width: 450px;
-    border: 2px dashed rgba(255,255,255,0.2);
-    padding: 70px 20px;
-    text-align: center;
-    border-radius: 25px;
-    margin-top: 15vh;
-    background: var(--bg-editor);
-}
-
-.divider {
-    width: 1px;
-    height: 25px;
-    background: rgba(255,255,255,0.1);
-    margin: 0 10px;
-}
-
 @media (max-width: 768px) {
     .logo { display: none; }
-    .toolbar { gap: 8px; }
+    .editor-header { justify-content: center; }
 }

@@ -1,4 +1,4 @@
-// Darling Editor - Motor "Clean-Canvas Proxy" V17
+// Darling Editor - Motor "Clean-Canvas Proxy" V17 (Restaurado y Completo)
 const pdfjsLib = window['pdfjs-dist/build/pdf'];
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
@@ -15,7 +15,7 @@ let pdfDoc = null;
 let currentPage = 1;
 let isRendering = false;
 
-// --- 1. CARGA SEGURA ---
+// --- 1. CARGA SEGURA Y NAVEGACIÓN ---
 fileInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) processFile(file);
@@ -24,7 +24,7 @@ fileInput.addEventListener('change', (e) => {
 async function processFile(file) {
     try {
         dropZone.style.display = 'none';
-        wrapper.innerHTML = '<div style="color:white; text-align:center; padding:50px;">Abriendo manual en modo de alto rendimiento...</div>';
+        wrapper.innerHTML = '<div style="color:white; text-align:center; padding:50px;">Abriendo archivo en modo profesional...</div>';
 
         const arrayBuffer = await file.arrayBuffer();
         if (file.type === 'application/pdf') {
@@ -36,12 +36,13 @@ async function processFile(file) {
             
             currentPage = 1;
             renderPage();
-        } else {
+        } else if (file.type.startsWith('image/')) {
             renderImagePage(file);
         }
     } catch (err) {
-        console.error("V17 Error:", err);
-        wrapper.innerHTML = '<div style="color:#ff4444; text-align:center; padding:50px;">Error de memoria. Prueba con un manual más corto o desde PC.</div>';
+        console.error("Error de carga:", err);
+        wrapper.innerHTML = '<div style="color:#ff4444; text-align:center; padding:50px;">Error al procesar. Intenta con un archivo más ligero.</div>';
+        dropZone.style.display = 'block';
     }
 }
 
@@ -52,7 +53,6 @@ async function renderPage() {
     pageDisplay.innerText = `Pág: ${currentPage} / ${pdfDoc.numPages}`;
 
     const page = await pdfDoc.getPage(currentPage);
-    // Escala moderada para PC y Móvil
     const isMobile = window.innerWidth < 768;
     const scale = isMobile ? 1.0 : 1.5;
     const viewport = page.getViewport({ scale });
@@ -70,7 +70,7 @@ async function renderPage() {
     canvas.width = viewport.width;
     canvas.height = viewport.height;
     
-    // Renderizado estándar (Estable)
+    // Renderizado V17 (El que te gustó)
     await page.render({ canvasContext: ctx, viewport }).promise;
 
     const textLayer = document.createElement('div');
@@ -99,7 +99,6 @@ async function renderPage() {
             block.setAttribute('data-x', x);
             block.setAttribute('data-y', y - h);
             
-            // LA CLAVE: Fondo sólido para tapar el dibujo original
             block.style.backgroundColor = 'white'; 
             block.style.fontSize = `${h}px`;
             block.style.color = 'black'; 
@@ -119,10 +118,39 @@ async function renderPage() {
     isRendering = false;
 }
 
-// Navegación
-prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; renderPage(); } };
-nextBtn.onclick = () => { if (pdfDoc && currentPage < pdfDoc.numPages) { currentPage++; renderPage(); } };
+async function renderImagePage(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        wrapper.innerHTML = '';
+        const img = new Image();
+        img.onload = () => {
+            const maxWidth = window.innerWidth * 0.9;
+            const scale = Math.min(1, maxWidth / img.width);
+            const width = img.width * scale;
+            const height = img.height * scale;
 
+            const container = document.createElement('div');
+            container.className = 'page-container';
+            container.style.width = `${width}px`;
+            container.style.height = `${height}px`;
+            container.style.margin = '0 auto';
+            container.style.backgroundImage = `url(${e.target.result})`;
+            container.style.backgroundSize = 'contain';
+            container.style.backgroundRepeat = 'no-repeat';
+            container.style.position = 'relative';
+
+            const textLayer = document.createElement('div');
+            textLayer.className = 'text-layer';
+            container.appendChild(textLayer);
+            wrapper.appendChild(container);
+            initInteractions();
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+// --- 2. INTERACCIONES ---
 function initInteractions() {
     interact('.draggable').draggable({
         listeners: {
@@ -137,6 +165,10 @@ function initInteractions() {
         }
     });
 }
+
+// Navegación
+prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; renderPage(); } };
+nextBtn.onclick = () => { if (pdfDoc && currentPage < pdfDoc.numPages) { currentPage++; renderPage(); } };
 
 addTextBtn.onclick = () => {
     const layer = document.querySelector('.text-layer');
@@ -166,6 +198,23 @@ exportBtn.onclick = async () => {
     const pdfWidth = doc.internal.pageSize.getWidth();
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
     doc.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-    doc.save('Manual_Darling.pdf');
+    doc.save('Darling_Edit.pdf');
     exportBtn.innerText = "Exportar PDF";
 };
+
+// --- RESTAURACIÓN DE EVENTOS DE CARGA (DRAG & DROP) ---
+dropZone.addEventListener('dragover', (e) => { 
+    e.preventDefault(); 
+    dropZone.classList.add('active'); 
+});
+
+dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('active');
+});
+
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('active');
+    const file = e.dataTransfer.files[0];
+    if (file) processFile(file);
+});
