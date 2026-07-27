@@ -1,0 +1,16 @@
+# Android / IDE
+.gradle
+/build
+/.idea
+*.iml
+local.properties
+.DS_Store
+.aiexclude
+
+# Web / Node
+node_modules/
+dist/
+.env
+
+# Logs
+*.log
