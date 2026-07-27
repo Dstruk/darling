@@ -3,27 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darling</title>
-    <style>
-        body {
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #ffffff;
-            font-family: 'Inter', -apple-system, sans-serif;
-            color: #000000;
-        }
-        h1 {
-            font-size: 2rem;
-            font-weight: 400;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-        }
-    </style>
+    <title>Darling Editor | Re-Maquetador Pro</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Motores Core -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
-    <h1>Darling</h1>
+    <header class="editor-header">
+        <div class="logo">DARLING</div>
+        <div class="toolbar">
+            <input type="file" id="file-upload" accept=".pdf" hidden>
+            <label for="file-upload" class="btn-tool">Cargar PDF</label>
+            
+            <div class="divider"></div>
+            
+            <button class="btn-tool secondary" id="add-text-btn">+ Añadir Texto</button>
+            <button class="btn-tool secondary" id="toggle-bg">Ocultar Original</button>
+            <button class="btn-tool" id="export-btn">Exportar Edición (PDF)</button>
+        </div>
+    </header>
+
+    <main id="editor-container">
+        <div id="drop-zone">
+            <div class="upload-icon">📄</div>
+            <p>Arrastra tu PDF para empezar la edición profesional</p>
+            <small>Podrás mover, editar y re-maquetar cada bloque</small>
+        </div>
+        <div id="canvas-wrapper"></div>
+    </main>
+
+    <!-- Panel de Propiedades Flotante (Expert Mode) -->
+    <div id="properties-panel" class="hidden">
+        <input type="number" id="font-size-input" title="Tamaño de letra">
+        <input type="color" id="color-input" title="Color de texto">
+        <button id="delete-block" title="Eliminar bloque">🗑️</button>
+    </div>
+
+    <script src="js/main.js"></script>
 </body>
 </html>
