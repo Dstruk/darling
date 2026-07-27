@@ -1,32 +1,31 @@
 :root {
-    --bg-main: #f0f2f5;
-    --bg-editor: #ffffff;
+    --bg-main: #0f172a;
+    --bg-editor: #1e293b;
     --primary: #2563eb;
-    --primary-hover: #1d4ed8;
-    --secondary: #64748b;
-    --text-main: #1e293b;
+    --text-main: #f1f5f9;
     --toolbar-h: 70px;
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg-main: #0f172a;
-        --bg-editor: #1e293b;
-        --text-main: #f1f5f9;
-        --secondary: #94a3b8;
-    }
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* Evita el zoom automático en móviles al enfocar elementos editables */
+input, select, textarea, [contenteditable] {
+    font-size: 16px !important;
 }
 
 body {
-    margin: 0;
     font-family: 'Inter', -apple-system, sans-serif;
     background-color: var(--bg-main);
     color: var(--text-main);
     height: 100vh;
+    width: 100vw;
     display: flex;
     flex-direction: column;
+    overflow: hidden; /* El scroll lo maneja el contenedor interno */
 }
 
 .editor-header {
@@ -35,79 +34,54 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 2rem;
-    border-bottom: 1px solid rgba(0,0,0,0.1);
-    box-shadow: var(--shadow-sm);
+    padding: 0 1.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
     z-index: 1000;
+    flex-shrink: 0;
 }
 
 .logo {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     font-weight: 900;
-    background: linear-gradient(45deg, var(--primary), #06b6d4);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--primary);
+    letter-spacing: 1px;
+    text-transform: uppercase;
 }
 
-.toolbar {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-}
-
-.btn-tool {
-    padding: 0.6rem 1.2rem;
-    background: var(--primary);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 0.85rem;
-}
-
-.btn-tool:hover {
-    background: var(--primary-hover);
-    transform: translateY(-1px);
-}
-
-.btn-tool.secondary {
-    background: transparent;
-    border: 1px solid var(--secondary);
-    color: var(--secondary);
-}
-
-.divider {
-    width: 1px;
-    height: 24px;
-    background: rgba(0,0,0,0.1);
-    margin: 0 0.5rem;
-}
-
+/* --- ESCENARIO DE EDICIÓN CENTRADO --- */
 #editor-container {
     flex: 1;
-    overflow: auto;
-    padding: 3rem;
+    width: 100%;
+    overflow: auto; /* Permite scroll si el documento es más grande que la pantalla */
     display: flex;
-    flex-direction: column;
-    align-items: center;
+    justify-content: center; /* Centrado horizontal del contenido */
+    align-items: flex-start; /* Inicia desde arriba pero centrado horizontalmente */
+    padding: 40px 15px;
+    background-color: var(--bg-main);
+    -webkit-overflow-scrolling: touch;
 }
 
 #canvas-wrapper {
-    position: relative;
-    background: white;
-    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Asegura que cada página esté centrada en el wrapper */
+    min-width: fit-content; /* Mantiene el tamaño para no romper la edición */
 }
 
 .page-container {
     position: relative;
+    background: white;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
     margin-bottom: 40px;
+    /* Mantenemos el tamaño original para que el motor de PDF no pierda precisión */
+    display: block;
 }
 
-canvas {
-    display: block;
-    transition: opacity 0.3s ease;
+/* Adaptabilidad para móviles sin romper la escala de edición */
+@media (max-width: 600px) {
+    #editor-container {
+        padding: 20px 10px;
+    }
 }
 
 .text-layer {
@@ -122,46 +96,77 @@ canvas {
 .editable-block {
     position: absolute;
     pointer-events: auto;
-    padding: 2px;
-    line-height: 1;
-    white-space: pre;
     cursor: move;
+    white-space: pre;
+    outline: none;
     border: 1px solid transparent;
-    user-select: text;
-}
-
-.editable-block:hover {
-    border: 1px dashed var(--primary);
-    background: rgba(37, 99, 235, 0.05);
 }
 
 .editable-block:focus {
-    outline: none;
-    border: 1px solid var(--primary);
-    background: white;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid var(--primary) !important;
+    z-index: 100;
     color: black;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-    z-index: 10;
+}
+
+/* UI Controls */
+.nav-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0,0,0,0.4);
+    padding: 5px 15px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+#page-num-display {
+    font-size: 0.85rem;
+    font-weight: bold;
+    min-width: 80px;
+    text-align: center;
+}
+
+.btn-tool {
+    padding: 0.6rem 1.2rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+
+.btn-tool:hover {
+    filter: brightness(1.2);
+    transform: translateY(-1px);
+}
+
+.btn-tool.secondary {
+    background: rgba(255,255,255,0.1);
 }
 
 #drop-zone {
-    width: 100%;
-    max-width: 600px;
-    padding: 5rem 2rem;
-    border: 2px dashed var(--secondary);
-    border-radius: 20px;
+    width: 90%;
+    max-width: 450px;
+    border: 2px dashed rgba(255,255,255,0.2);
+    padding: 70px 20px;
     text-align: center;
-    margin-top: 5rem;
+    border-radius: 25px;
+    margin-top: 15vh;
     background: var(--bg-editor);
-    transition: all 0.3s;
 }
 
-#drop-zone.active {
-    border-color: var(--primary);
-    background: rgba(37, 99, 235, 0.05);
+.divider {
+    width: 1px;
+    height: 25px;
+    background: rgba(255,255,255,0.1);
+    margin: 0 10px;
 }
 
-.upload-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+@media (max-width: 768px) {
+    .logo { display: none; }
+    .toolbar { gap: 8px; }
 }
