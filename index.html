@@ -3,44 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darling Editor | Re-Maquetador Pro</title>
+    <title>Darling Editor | Pro Edition</title>
     <link rel="stylesheet" href="css/style.css">
-    <!-- Motores Core -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.1);
+            padding: 5px 15px;
+            border-radius: 8px;
+        }
+        #page-num-display {
+            font-weight: bold;
+            min-width: 80px;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
     <header class="editor-header">
         <div class="logo">DARLING</div>
         <div class="toolbar">
             <input type="file" id="file-upload" accept=".pdf,image/*" hidden>
-            <label for="file-upload" class="btn-tool">Cargar PDF o Imagen</label>
+            <label for="file-upload" class="btn-tool">Cargar Archivo</label>
             
             <div class="divider"></div>
             
-            <button class="btn-tool secondary" id="add-text-btn">+ Añadir Texto</button>
-            <button class="btn-tool secondary" id="toggle-bg">Ocultar Original</button>
-            <button class="btn-tool" id="export-btn">Exportar Edición (PDF)</button>
+            <div class="nav-controls">
+                <button class="btn-tool secondary" id="prev-page">◀</button>
+                <span id="page-num-display">Pág: 0 / 0</span>
+                <button class="btn-tool secondary" id="next-page">▶</button>
+            </div>
+
+            <div class="divider"></div>
+            
+            <button class="btn-tool secondary" id="add-text-btn">+ Texto</button>
+            <button class="btn-tool" id="export-btn">Exportar PDF</button>
         </div>
     </header>
 
     <main id="editor-container">
         <div id="drop-zone">
-            <div class="upload-icon">📄🖼️</div>
-            <p>Arrastra tu PDF o Imagen para empezar la edición profesional</p>
-            <small>Podrás mover, editar y re-maquetar cada bloque</small>
+            <p>Arrastra tu manual aquí</p>
         </div>
         <div id="canvas-wrapper"></div>
     </main>
-
-    <!-- Panel de Propiedades Flotante (Expert Mode) -->
-    <div id="properties-panel" class="hidden">
-        <input type="number" id="font-size-input" title="Tamaño de letra">
-        <input type="color" id="color-input" title="Color de texto">
-        <button id="delete-block" title="Eliminar bloque">🗑️</button>
-    </div>
 
     <script src="js/main.js"></script>
 </body>

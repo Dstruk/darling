@@ -1,4 +1,4 @@
-// Darling Editor - Motor "Ultra-Resilient" V11
+// Darling Editor - Motor "Clean-Canvas Proxy" V17
 const pdfjsLib = window['pdfjs-dist/build/pdf'];
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
@@ -7,7 +7,15 @@ const wrapper = document.getElementById('canvas-wrapper');
 const dropZone = document.getElementById('drop-zone');
 const addTextBtn = document.getElementById('add-text-btn');
 const exportBtn = document.getElementById('export-btn');
+const prevBtn = document.getElementById('prev-page');
+const nextBtn = document.getElementById('next-page');
+const pageDisplay = document.getElementById('page-num-display');
 
+let pdfDoc = null;
+let currentPage = 1;
+let isRendering = false;
+
+// --- 1. CARGA SEGURA ---
 fileInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) processFile(file);
@@ -16,56 +24,53 @@ fileInput.addEventListener('change', (e) => {
 async function processFile(file) {
     try {
         dropZone.style.display = 'none';
-        wrapper.innerHTML = '<div style="color:white; text-align:center; padding:50px; font-family:sans-serif;">Analizando manual complejo... <br><small>Esto puede tardar unos segundos en dispositivos móviles</small></div>';
+        wrapper.innerHTML = '<div style="color:white; text-align:center; padding:50px;">Abriendo manual en modo de alto rendimiento...</div>';
 
         const arrayBuffer = await file.arrayBuffer();
         if (file.type === 'application/pdf') {
-            const pdf = await pdfjsLib.getDocument({ 
+            pdfDoc = await pdfjsLib.getDocument({ 
                 data: arrayBuffer,
                 cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
                 cMapPacked: true,
             }).promise;
             
-            wrapper.innerHTML = '';
-            // Proceso secuencial para evitar saturación de memoria
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                await renderProPage(page);
-                // Pequeño respiro para el procesador
-                await new Promise(r => setTimeout(r, 150));
-            }
-        } else if (file.type.startsWith('image/')) {
-            await renderImagePage(file);
+            currentPage = 1;
+            renderPage();
+        } else {
+            renderImagePage(file);
         }
-        initInteractions();
     } catch (err) {
-        console.error("Error crítico:", err);
-        wrapper.innerHTML = `<div style="color:#ff4444; text-align:center; padding:50px;">
-            Error de memoria. <br>El archivo es demasiado complejo para procesarlo con filtros avanzados.<br>
-            <button onclick="location.reload()" style="margin-top:10px; padding:10px; border-radius:5px; border:none; background:#2563eb; color:white; cursor:pointer;">Reintentar</button>
-        </div>`;
+        console.error("V17 Error:", err);
+        wrapper.innerHTML = '<div style="color:#ff4444; text-align:center; padding:50px;">Error de memoria. Prueba con un manual más corto o desde PC.</div>';
     }
 }
 
-async function renderProPage(page) {
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    // Escala adaptada para no colapsar la memoria RAM
-    const scale = isMobile ? 0.9 : 1.5; 
+async function renderPage() {
+    if (!pdfDoc || isRendering) return;
+    isRendering = true;
+    wrapper.innerHTML = '';
+    pageDisplay.innerText = `Pág: ${currentPage} / ${pdfDoc.numPages}`;
+
+    const page = await pdfDoc.getPage(currentPage);
+    // Escala moderada para PC y Móvil
+    const isMobile = window.innerWidth < 768;
+    const scale = isMobile ? 1.0 : 1.5;
     const viewport = page.getViewport({ scale });
-    
-    const pageContainer = document.createElement('div');
-    pageContainer.className = 'page-container';
-    pageContainer.style.width = `${viewport.width}px`;
-    pageContainer.style.height = `${viewport.height}px`;
-    pageContainer.style.position = 'relative';
-    pageContainer.style.backgroundColor = 'white';
+
+    const container = document.createElement('div');
+    container.className = 'page-container';
+    container.style.width = `${viewport.width}px`;
+    container.style.height = `${viewport.height}px`;
+    container.style.margin = '0 auto';
+    container.style.backgroundColor = 'white';
+    container.style.position = 'relative';
 
     const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const ctx = canvas.getContext('2d');
     canvas.width = viewport.width;
     canvas.height = viewport.height;
     
-    // 1. Renderizar fondo original completo
+    // Renderizado estándar (Estable)
     await page.render({ canvasContext: ctx, viewport }).promise;
 
     const textLayer = document.createElement('div');
@@ -80,29 +85,10 @@ async function renderProPage(page) {
 
         const x = tx[4];
         const y = tx[5];
-        const w = item.width * scale;
         const h = item.height * scale;
+        const w = item.width * scale;
 
         if (item.str.trim().length > 0) {
-            // --- BORRADO QUIRÚRGICO DE ALTA PRECISIÓN ---
-            // Muestreamos el color del fondo justo al lado del texto para camuflar el borrado
-            let bgColor = 'white';
-            try {
-                // Muestra 2 píxeles a la izquierda y arriba del bloque
-                const sampleX = x > 2 ? x - 2 : x + w + 2;
-                const sampleY = y - h - 2;
-                const pixel = ctx.getImageData(sampleX, sampleY, 1, 1).data;
-                bgColor = `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
-            } catch(e) {
-                bgColor = 'white';
-            }
-
-            // Pintamos un rectángulo del color del fondo sobre el original para eliminar el "fantasma"
-            ctx.fillStyle = bgColor;
-            // Damos un pequeño margen para asegurar el borrado total de glifos complejos
-            ctx.fillRect(x - 2, y - h - 3, w + 4, h + 6);
-
-            // --- BLOQUE EDITABLE (Capa superior) ---
             const block = document.createElement('div');
             block.className = 'editable-block draggable';
             block.contentEditable = true;
@@ -113,47 +99,29 @@ async function renderProPage(page) {
             block.setAttribute('data-x', x);
             block.setAttribute('data-y', y - h);
             
+            // LA CLAVE: Fondo sólido para tapar el dibujo original
+            block.style.backgroundColor = 'white'; 
             block.style.fontSize = `${h}px`;
             block.style.color = 'black'; 
-            block.style.backgroundColor = 'transparent'; 
-            block.style.minWidth = `${w}px`;
+            block.style.minWidth = `${w + 2}px`;
+            block.style.minHeight = `${h}px`;
             block.style.lineHeight = '1';
             
             textLayer.appendChild(block);
         }
     });
 
-    pageContainer.appendChild(canvas);
-    pageContainer.appendChild(textLayer);
-    wrapper.appendChild(pageContainer);
+    container.appendChild(canvas);
+    container.appendChild(textLayer);
+    wrapper.appendChild(container);
+    
+    initInteractions();
+    isRendering = false;
 }
 
-async function renderImagePage(file) {
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                const width = Math.min(window.innerWidth - 20, 800);
-                const scale = width / img.width;
-                const height = img.height * scale;
-                const pageContainer = document.createElement('div');
-                pageContainer.className = 'page-container';
-                pageContainer.style.width = `${width}px`;
-                pageContainer.style.height = `${height}px`;
-                pageContainer.style.backgroundImage = `url(${e.target.result})`;
-                pageContainer.style.backgroundSize = 'contain';
-                const textLayer = document.createElement('div');
-                textLayer.className = 'text-layer';
-                pageContainer.appendChild(textLayer);
-                wrapper.appendChild(pageContainer);
-                resolve();
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    });
-}
+// Navegación
+prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; renderPage(); } };
+nextBtn.onclick = () => { if (pdfDoc && currentPage < pdfDoc.numPages) { currentPage++; renderPage(); } };
 
 function initInteractions() {
     interact('.draggable').draggable({
@@ -170,10 +138,9 @@ function initInteractions() {
     });
 }
 
-addTextBtn.addEventListener('click', () => {
-    const layers = document.querySelectorAll('.text-layer');
-    const layer = layers[layers.length - 1];
-    if(layer) {
+addTextBtn.onclick = () => {
+    const layer = document.querySelector('.text-layer');
+    if (layer) {
         const b = document.createElement('div');
         b.className = 'editable-block draggable';
         b.contentEditable = true;
@@ -182,35 +149,23 @@ addTextBtn.addEventListener('click', () => {
         b.setAttribute('data-x', 100);
         b.setAttribute('data-y', 100);
         b.style.fontSize = '20px';
-        b.style.color = 'black';
+        b.style.backgroundColor = 'white';
         layer.appendChild(b);
         b.focus();
     }
-});
+};
 
-exportBtn.addEventListener('click', async () => {
-    exportBtn.innerText = "Exportando PDF...";
+exportBtn.onclick = async () => {
+    const pageContainer = document.querySelector('.page-container');
+    if (!pageContainer) return;
+    exportBtn.innerText = "Exportando...";
     const { jsPDF } = window.jspdf;
+    const canvas = await html2canvas(pageContainer, { scale: 1.5, useCORS: true });
+    const imgData = canvas.toDataURL('image/jpeg', 0.9);
     const doc = new jsPDF('p', 'pt', 'a4');
-    const pages = document.querySelectorAll('.page-container');
-    
-    for (let i = 0; i < pages.length; i++) {
-        const canvas = await html2canvas(pages[i], { scale: 1.5, useCORS: true });
-        const imgData = canvas.toDataURL('image/jpeg', 0.9);
-        if (i > 0) doc.addPage();
-        const pdfWidth = doc.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        doc.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-    }
-    doc.save('Darling_Editado_V11.pdf');
-    exportBtn.innerText = "Exportar Edición (PDF)";
-});
-
-// Drag & Drop
-dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('active'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('active'));
-dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file) processFile(file);
-});
+    const pdfWidth = doc.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    doc.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+    doc.save('Manual_Darling.pdf');
+    exportBtn.innerText = "Exportar PDF";
+};
