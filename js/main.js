@@ -1,4 +1,4 @@
-// Darling Editor - Motor "Clean Slate" V10
+// Darling Editor - Motor "Ultra-Resilient" V11
 const pdfjsLib = window['pdfjs-dist/build/pdf'];
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
@@ -16,7 +16,7 @@ fileInput.addEventListener('change', (e) => {
 async function processFile(file) {
     try {
         dropZone.style.display = 'none';
-        wrapper.innerHTML = '<div style="color:white; text-align:center; padding:50px; font-family:sans-serif;">Abriendo en modo edición directa...</div>';
+        wrapper.innerHTML = '<div style="color:white; text-align:center; padding:50px; font-family:sans-serif;">Analizando manual complejo... <br><small>Esto puede tardar unos segundos en dispositivos móviles</small></div>';
 
         const arrayBuffer = await file.arrayBuffer();
         if (file.type === 'application/pdf') {
@@ -27,23 +27,30 @@ async function processFile(file) {
             }).promise;
             
             wrapper.innerHTML = '';
+            // Proceso secuencial para evitar saturación de memoria
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
-                await renderCleanSlatePage(page);
+                await renderProPage(page);
+                // Pequeño respiro para el procesador
+                await new Promise(r => setTimeout(r, 150));
             }
-        } else {
+        } else if (file.type.startsWith('image/')) {
             await renderImagePage(file);
         }
         initInteractions();
     } catch (err) {
-        console.error("Error:", err);
-        wrapper.innerHTML = '<div style="color:#ff4444; text-align:center; padding:50px;">Error al cargar. El archivo es muy complejo o pesado.</div>';
+        console.error("Error crítico:", err);
+        wrapper.innerHTML = `<div style="color:#ff4444; text-align:center; padding:50px;">
+            Error de memoria. <br>El archivo es demasiado complejo para procesarlo con filtros avanzados.<br>
+            <button onclick="location.reload()" style="margin-top:10px; padding:10px; border-radius:5px; border:none; background:#2563eb; color:white; cursor:pointer;">Reintentar</button>
+        </div>`;
     }
 }
 
-async function renderCleanSlatePage(page) {
+async function renderProPage(page) {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const scale = isMobile ? 1.0 : 1.5; 
+    // Escala adaptada para no colapsar la memoria RAM
+    const scale = isMobile ? 0.9 : 1.5; 
     const viewport = page.getViewport({ scale });
     
     const pageContainer = document.createElement('div');
@@ -53,33 +60,14 @@ async function renderCleanSlatePage(page) {
     pageContainer.style.position = 'relative';
     pageContainer.style.backgroundColor = 'white';
 
-    // 1. FONDO LIMPIO (Sin texto original)
-    // Extraemos la lista de operadores y eliminamos los de texto
-    const opList = await page.getOperatorList();
-    const filteredOps = new pdfjsLib.OperatorList();
-    const textOps = [
-        pdfjsLib.OPS.beginText,
-        pdfjsLib.OPS.endText,
-        pdfjsLib.OPS.showText,
-        pdfjsLib.OPS.showTextGlyphs,
-        pdfjsLib.OPS.showSpacedText,
-        pdfjsLib.OPS.nextLineShowText
-    ];
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    
+    // 1. Renderizar fondo original completo
+    await page.render({ canvasContext: ctx, viewport }).promise;
 
-    for (let i = 0; i < opList.fnArray.length; i++) {
-        if (!textOps.includes(opList.fnArray[i])) {
-            filteredOps.addOp(opList.fnArray[i], opList.argsArray[i]);
-        }
-    }
-
-    // Renderizamos el fondo como SVG (más estable para transparencia)
-    const svgGfx = new pdfjsLib.SVGGraphics(page.commonObjs, page.objs);
-    const svg = await svgGfx.getSVG(filteredOps, viewport);
-    svg.style.width = '100%';
-    svg.style.height = '100%';
-    pageContainer.appendChild(svg);
-
-    // 2. CAPA DE EDICIÓN (Texto real)
     const textLayer = document.createElement('div');
     textLayer.className = 'text-layer';
     const textContent = await page.getTextContent();
@@ -92,27 +80,50 @@ async function renderCleanSlatePage(page) {
 
         const x = tx[4];
         const y = tx[5];
-        const h = item.height * scale;
         const w = item.width * scale;
+        const h = item.height * scale;
 
-        const block = document.createElement('div');
-        block.className = 'editable-block draggable';
-        block.contentEditable = true;
-        block.innerText = item.str;
-        
-        block.style.position = 'absolute';
-        block.style.transform = `translate(${x}px, ${y - h}px)`;
-        block.setAttribute('data-x', x);
-        block.setAttribute('data-y', y - h);
-        
-        block.style.fontSize = `${h}px`;
-        block.style.color = 'black'; 
-        block.style.lineHeight = '1';
-        block.style.minWidth = `${w}px`;
-        
-        textLayer.appendChild(block);
+        if (item.str.trim().length > 0) {
+            // --- BORRADO QUIRÚRGICO DE ALTA PRECISIÓN ---
+            // Muestreamos el color del fondo justo al lado del texto para camuflar el borrado
+            let bgColor = 'white';
+            try {
+                // Muestra 2 píxeles a la izquierda y arriba del bloque
+                const sampleX = x > 2 ? x - 2 : x + w + 2;
+                const sampleY = y - h - 2;
+                const pixel = ctx.getImageData(sampleX, sampleY, 1, 1).data;
+                bgColor = `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
+            } catch(e) {
+                bgColor = 'white';
+            }
+
+            // Pintamos un rectángulo del color del fondo sobre el original para eliminar el "fantasma"
+            ctx.fillStyle = bgColor;
+            // Damos un pequeño margen para asegurar el borrado total de glifos complejos
+            ctx.fillRect(x - 2, y - h - 3, w + 4, h + 6);
+
+            // --- BLOQUE EDITABLE (Capa superior) ---
+            const block = document.createElement('div');
+            block.className = 'editable-block draggable';
+            block.contentEditable = true;
+            block.innerText = item.str;
+            
+            block.style.position = 'absolute';
+            block.style.transform = `translate(${x}px, ${y - h}px)`;
+            block.setAttribute('data-x', x);
+            block.setAttribute('data-y', y - h);
+            
+            block.style.fontSize = `${h}px`;
+            block.style.color = 'black'; 
+            block.style.backgroundColor = 'transparent'; 
+            block.style.minWidth = `${w}px`;
+            block.style.lineHeight = '1';
+            
+            textLayer.appendChild(block);
+        }
     });
 
+    pageContainer.appendChild(canvas);
     pageContainer.appendChild(textLayer);
     wrapper.appendChild(pageContainer);
 }
@@ -171,13 +182,14 @@ addTextBtn.addEventListener('click', () => {
         b.setAttribute('data-x', 100);
         b.setAttribute('data-y', 100);
         b.style.fontSize = '20px';
+        b.style.color = 'black';
         layer.appendChild(b);
         b.focus();
     }
 });
 
 exportBtn.addEventListener('click', async () => {
-    exportBtn.innerText = "Guardando...";
+    exportBtn.innerText = "Exportando PDF...";
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'pt', 'a4');
     const pages = document.querySelectorAll('.page-container');
@@ -186,13 +198,17 @@ exportBtn.addEventListener('click', async () => {
         const canvas = await html2canvas(pages[i], { scale: 1.5, useCORS: true });
         const imgData = canvas.toDataURL('image/jpeg', 0.9);
         if (i > 0) doc.addPage();
-        doc.addImage(imgData, 'JPEG', 0, 0, 595, 842);
+        const pdfWidth = doc.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        doc.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
     }
-    doc.save('Darling_WordLike_V10.pdf');
+    doc.save('Darling_Editado_V11.pdf');
     exportBtn.innerText = "Exportar Edición (PDF)";
 });
 
+// Drag & Drop
 dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('active'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('active'));
 dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
